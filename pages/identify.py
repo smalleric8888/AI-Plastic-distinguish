@@ -25,21 +25,30 @@ def render_identify_page(material_engine: MaterialEngine):
         else:
             st.info("📷 請拍攝或上傳塑膠廢料照片")
 
-    # Gemini 結構化 JSON 分析摘要
+    # Gemini 結構化 JSON 分析摘要 (使用 session_state 快取避免每次切換重複呼叫)
     if active_img:
-        gemini_svc = GeminiService()
-        g_res = gemini_svc.analyze_image_structured(active_img)
-        st.session_state["gemini_result"] = g_res
+        current_img_key = getattr(uploaded_photo, "name", str(id(active_img)))
+        if st.session_state.get("last_uploaded_name") != current_img_key or "gemini_result" not in st.session_state:
+            with st.spinner("🤖 Gemini 視覺 AI 正在分析照片與推測材質..."):
+                gemini_svc = GeminiService()
+                st.session_state["gemini_result"] = gemini_svc.analyze_image_structured(active_img)
+                st.session_state["last_uploaded_name"] = current_img_key
+                st.session_state["final_result"] = None  # 上傳新照片時重置舊預測
 
-        st.markdown(f"""
-        <div class="gemini-card">
-            <h4>🤖 第一關：Gemini 多模態大數據庫初步分析摘要</h4>
-            <p><b>🔍 AI 識別物品</b>：{g_res['object_name']}</p>
-            <p><b>🎨 外觀與特徵</b>：{g_res['color_appearance']}</p>
-            <p><b>💡 大數據庫材質推測</b>：{', '.join(g_res['estimated_materials'])}</p>
-            <p><b>📝 全球工業應用</b>：{g_res['reasoning']}</p>
-        </div>
-        """, unsafe_allow_html=True)
+        g_res = st.session_state.get("gemini_result")
+        if g_res:
+            st.markdown(f"""
+            <div class="gemini-card">
+                <h4>🤖 第一關：Gemini 多模態大數據庫初步分析摘要</h4>
+                <p><b>🔍 AI 識別物品</b>：{g_res['object_name']}</p>
+                <p><b>🎨 外觀與特徵</b>：{g_res['color_appearance']}</p>
+                <p><b>💡 大數據庫材質推測</b>：{', '.join(g_res['estimated_materials'])}</p>
+                <p><b>📝 全球工業應用</b>：{g_res['reasoning']}</p>
+            </div>
+            """, unsafe_allow_html=True)
+    else:
+        st.session_state["gemini_result"] = None
+        st.session_state["last_uploaded_name"] = None
 
     st.markdown("---")
 
