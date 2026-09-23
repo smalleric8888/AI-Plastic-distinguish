@@ -74,11 +74,13 @@ class MaterialEngine:
 
         # Gemini 大數據輔助加分
         gemini_predicted_mat = None
-        if gemini_analysis and gemini_analysis.get("candidates"):
-            gemini_predicted_mat = gemini_analysis["candidates"][0]
-            for cand in gemini_analysis["candidates"]:
-                if cand in scores:
-                    scores[cand] += 15.0
+        if gemini_analysis:
+            est_mats = gemini_analysis.get("estimated_materials") or gemini_analysis.get("candidates") or []
+            if est_mats:
+                gemini_predicted_mat = est_mats[0]
+                for cand in est_mats:
+                    if cand in scores:
+                        scores[cand] += 15.0
 
         # 計算百分比排名
         min_s = min(scores.values())

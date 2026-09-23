@@ -47,7 +47,7 @@ class GeminiService:
 
             # 嘗試呼叫 Gemini 多模態 API (若有金鑰)
             if self.api_key:
-                for model_name in ["gemini-3.5-flash", "gemini-3.6-flash", "gemini-flash-latest"]:
+                for model_name in ["gemini-2.5-flash", "gemini-2.0-flash", "gemini-1.5-flash", "gemini-1.5-pro"]:
                     try:
                         url = f"https://generativelanguage.googleapis.com/v1beta/models/{model_name}:generateContent?key={self.api_key}"
                         prompt = """你是一位專業的塑膠廢料回收與材質鑑定專家。請分析這張照片中的物品：

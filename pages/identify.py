@@ -49,15 +49,10 @@ def render_identify_page(material_engine: MaterialEngine):
 
     # 關卡 1: 水中浮沉
     st.markdown("#### 1. 水中浮沉測試")
-    float_input = st.segmented_control(
-        "浮沉選項",
-        ["1. 浮於水面 (ρ < 1.0 g/cm³, 候選: PP, PE)", "2. 沉於水底 (ρ > 1.0 g/cm³, 候選: ABS, PVC, PS, PET)"],
-        default=st.session_state.get("float_test")
-    ) if hasattr(st, "segmented_control") else st.radio(
-        "1. 水中浮沉測試：",
-        ["1. 浮於水面 (ρ < 1.0 g/cm³, 候選: PP, PE)", "2. 沉於水底 (ρ > 1.0 g/cm³, 候選: ABS, PVC, PS, PET)"],
-        index=0 if st.session_state.get("float_test") != 2 else 1
-    )
+    opts_float = ["1. 浮於水面 (ρ < 1.0 g/cm³, 候選: PP, PE)", "2. 沉於水底 (ρ > 1.0 g/cm³, 候選: ABS, PVC, PS, PET)"]
+    def_float = opts_float[0] if st.session_state.get("float_test") == 1 else (opts_float[1] if st.session_state.get("float_test") == 2 else None)
+    
+    float_input = st.segmented_control("浮沉選項", opts_float, default=def_float) if hasattr(st, "segmented_control") else st.radio("1. 水中浮沉測試：", opts_float, index=0)
     
     if float_input:
         st.session_state["float_test"] = 1 if "1." in float_input else 2
@@ -66,15 +61,14 @@ def render_identify_page(material_engine: MaterialEngine):
     sound_input = None
     if st.session_state.get("float_test"):
         st.markdown("#### 2. 觸感與剛性聲音特徵")
-        sound_input = st.segmented_control(
-            "聲音選項",
-            ["A. 硬質敲擊聲 (ABS, PS, PVC, 硬PP)", "B. 柔軟延展韌性 (PE, 軟PP)", "C. 打包帶/帶狀 (PP, PET)"],
-            default=st.session_state.get("sound_test")
-        ) if hasattr(st, "segmented_control") else st.radio(
-            "2. 觸感與聲音特徵：",
-            ["A. 硬質敲擊聲 (ABS, PS, PVC, 硬PP)", "B. 柔軟延展韌性 (PE, 軟PP)", "C. 打包帶/帶狀 (PP, PET)"],
-            index=0
-        )
+        opts_sound = ["A. 硬質敲擊聲 (ABS, PS, PVC, 硬PP)", "B. 柔軟延展韌性 (PE, 軟PP)", "C. 打包帶/帶狀 (PP, PET)"]
+        def_sound = None
+        if st.session_state.get("sound_test"):
+            for o in opts_sound:
+                if o.startswith(st.session_state["sound_test"]):
+                    def_sound = o
+
+        sound_input = st.segmented_control("聲音選項", opts_sound, default=def_sound) if hasattr(st, "segmented_control") else st.radio("2. 觸感與聲音特徵：", opts_sound, index=0)
         if sound_input:
             st.session_state["sound_test"] = sound_input[0]
 
@@ -82,27 +76,20 @@ def render_identify_page(material_engine: MaterialEngine):
     smell_input = None
     if st.session_state.get("sound_test"):
         st.markdown("#### 3. 微量燃燒特徵與氣味")
-        smell_input = st.segmented_control(
-            "氣味選項",
-            [
-                "甲. 柴油/機油味 (PP)",
-                "乙. 滴蠟/石蠟味 (PE)",
-                "丙. 鹽酸酸臭味/綠焰 (PVC)",
-                "丁. 燒焦輪胎味/濃黑煙 (ABS)",
-                "戊. 化學甜味/碳黑 (PS)"
-            ],
-            default=st.session_state.get("burn_test")
-        ) if hasattr(st, "segmented_control") else st.radio(
-            "3. 燃燒特徵與氣味：",
-            [
-                "甲. 柴油/機油味 (PP)",
-                "乙. 滴蠟/石蠟味 (PE)",
-                "丙. 鹽酸酸臭味/綠焰 (PVC)",
-                "丁. 燒焦輪胎味/濃黑煙 (ABS)",
-                "戊. 化學甜味/碳黑 (PS)"
-            ],
-            index=0
-        )
+        opts_smell = [
+            "甲. 柴油/機油味 (PP)",
+            "乙. 滴蠟/石蠟味 (PE)",
+            "丙. 鹽酸酸臭味/綠焰 (PVC)",
+            "丁. 燒焦輪胎味/濃黑煙 (ABS)",
+            "戊. 化學甜味/碳黑 (PS)"
+        ]
+        def_smell = None
+        if st.session_state.get("burn_test"):
+            for o in opts_smell:
+                if o.startswith(st.session_state["burn_test"]):
+                    def_smell = o
+
+        smell_input = st.segmented_control("氣味選項", opts_smell, default=def_smell) if hasattr(st, "segmented_control") else st.radio("3. 燃燒特徵與氣味：", opts_smell, index=0)
         if smell_input:
             st.session_state["burn_test"] = smell_input[0]
 
