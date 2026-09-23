@@ -1,63 +1,72 @@
-# ♻️ 天辰 AI 塑膠材質模擬辨識系統 (Tianchen AI Plastic Identification System)
+# ♻️ 天辰 AI 塑膠材質模擬辨識系統 V2.0 (Tianchen AI Plastic Identification System V2.0)
 
-[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://share.streamlit.io)
+[![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-plastic-distinguish-dbakjmlh2tvfaexwaynjip.streamlit.app)
+![Version](https://img.shields.io/badge/version-2.0.0-blue)
 ![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-本系統是一套結合 **Gemini 多模態 AI 大數據庫** 與 **天辰廢料全循環履歷資料庫** 的手機 Web (PWA) 塑膠材質辨識系統。系統支援 **照片拍攝/上傳**、**敲擊聲音頻波形與 FFT 頻譜分析**、**燃燒實驗影片分析**，並結合 **三步引導式診斷問答**，快速推估廢料材質（PP、PE、ABS、PVC、PS、PET 等）與信心度比分，並提供天辰實體影音對比。
+本系統是一套結合 **Gemini 3.5 Flash 多模態 AI** 與 **天辰廢料全循環履歷大數據庫** 的手機/Web 多模態塑膠材質鑑定系統。
+V2.0 版本新增 **「3合1全模態綜合辨識 (3-in-1 Multi-Modal Fusion Analysis)」**，允許使用者在單一介面中同時融合 **照片視覺 AI**、**敲擊聲響頻譜 (FFT)** 與 **熱解燃燒氣味**，由融合診斷引擎動態算演 Top-3 最優估算結果、三路證據鏈契合度與 Plotly 雷達圖。
 
 ---
 
-## 🌟 核心功能與亮點 (Key Features)
+## 🌟 V2.0 核心功能與架構 (V2.0 Key Features)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│              🤖 第一關：Gemini 多模態 AI 大數據庫初步分析               │
-│  🔍 物品輪廓與顏色辨識  │ 💡 提示全球工業常用材質  │ 📝 建議測試選項與用途分析   │
+│                 🔬 V2.0 3合1全模態綜合辨識 (Unified Fusion)             │
+├────────────────────┬────────────────────┬───────────────────────────────┤
+│ 📸 模態1: 視覺照片  │ 🎵 模態2: 敲擊聲響  │ 🎥 模態3: 燃燒與氣味          │
+│ (Gemini 3.5 Flash) │ (FFT Peak/Centroid)│ (柴油/石蠟/鹽酸/輪胎/化學甜味) │
+└────────────────────┴────────────────────┴───────────────────────────────┘
+                                     │
+                                     ▼
+┌─────────────────────────────────────────────────────────────────────────┐
+│               🧠 多模態動態權重融合評分引擎 (MaterialEngine)            │
+│  物理約束 (浮沉) + 視覺AI (+25) + 聲響FFT (+25) + 熱解氣味 (+35)         │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                     🎙️ / 🎥 多模態媒體輔助分析                          │
-│  🎵 音訊上傳 (.m4a/.mp3)：即時繪製時域波形與 FFT 頻譜主頻率 (Hz)        │
-│  🎥 影片上傳 (.mp4)：火焰顏色 (如 PVC 綠焰) 與煙霧濃度採樣               │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                    🔍 實體驗證：三步引導式診斷問答                       │
-│  Step 1: 水中浮沉測試 (ρ < 1.0 g/cm³ 浮水 vs ρ > 1.0 g/cm³ 沉水)        │
-│  Step 2: 觸感與剛性聲音特徵 (硬質敲擊聲 / 柔軟延展 / 打包帶)            │
-│  Step 3: 燃燒特徵與氣味 (柴油味 / 石蠟味 / 鹽酸酸臭與綠焰 / 燒焦輪胎味)  │
-└────────────────────────────────────┬────────────────────────────────────┘
-                                     │
-                                     ▼
-┌─────────────────────────────────────────────────────────────────────────┐
-│                 📊 最終推估報告 ✕ 天辰資料庫實體影音對照                 │
-│  🥇 材質信心度百分比儀表板  │ 🎵 播放標準敲擊聲  │ 🎥 播放燃燒實驗影片  │
+│                 📊 V2.0 綜合診斷報告 ✕ 三路證據鏈對照                   │
+│ 🥇 Top-3 歸一化信心度  │ 🕸️ Plotly 三路契合雷達圖 │ 🟢 證據鏈一致性檢測 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **🤖 Gemini 多模態 AI 大數據庫初步分析**：
-   - 載入照片後，自動進行物品形態、顏色、工業用途解析與材質候選預測。
-2. **🎵 聲學波形與 FFT 頻譜分析**：
-   - 支援上傳 `.m4a` / `.wav` / `.mp3` 敲擊聲音檔。
-   - 即時繪製**時域波形圖**與**快速傅立葉 (FFT) 頻譜圖**，判定高頻金屬響聲 ($>2200 \text{ Hz}$) 或低頻沉悶聲。
-3. **🎥 燃燒影片視覺分析**：
-   - 支援上傳 `.mp4` 燃燒實錄影片，進行綠底火焰（PVC 標誌）、藍底火焰與煙霧濃度檢測。
-4. **📁 天辰履歷庫實體影音對照**：
-   - 對照天辰獨立 `聲音檔/` (13 個 .m4a 檔) 與 `影片檔/` (8 個 .mp4 燃燒影片)，結果頁可直接播放標準影音進行實體驗證。
+1. **🔬 V2.0 3合1全模態綜合辨識 (3-in-1 Fusion)**：
+   - 整合照片、聲音波形與燃燒特徵三路數據，提供一站式綜合鑑定報告。
+2. **🤖 Gemini 3.5 Flash 實時視覺 AI**：
+   - 上傳廢料照片，實時分析物品輪廓、色彩特徵與全球工業應用。
+3. **🎵 聲學波形與 FFT 頻譜分析**：
+   - 支援敲擊聲音上傳/錄製，計算 Peak Freq (主頻) 與 Spectral Centroid (頻譜重心)，辨識硬質金屬響聲 ($>2200 \text{ Hz}$) 或柔軟低音。
+4. **🎥 燃燒影片與熱解氣味觀察**：
+   - 提供黃焰、濃煙、綠焰 (PVC) 與特定化學氣味（柴油味 PP / 石蠟味 PE / 輪胎味 ABS / 甜味 PS）對照。
+5. **📁 天辰資料庫實體影音對照**：
+   - 連接天辰廢料庫，包含標準參考照片與 8 組實體燃燒實驗影片。
 
 ---
 
 ## 📂 專案檔案結構 (Project Structure)
 
 ```text
-├── app.py                         # Streamlit Web 手機 App 主程式與多模態介面
-├── plastic_data_loader.py         # 天辰廢料履歷資料庫 (Excel/音訊/影片) 載入模組
-├── plastic_identifier_engine.py   # 雙層 AI 推估算法、聲學 FFT 與影像分析引擎
-├── requirements.txt               # 雲端部署環境依賴套件清單
-└── README.md                      # 專案說明文件
+├── app.py                         # V2.0 Streamlit Web 主程式與頁面路由
+├── pages/                         # 模組化頁面分發
+│   ├── fusion.py                  # [NEW V2.0] 3合1全模態綜合辨識頁面
+│   ├── identify.py                # 漸進式照片與診斷問答頁面
+│   ├── audio.py                   # 敲擊聲響波形與 FFT 頻譜頁面
+│   ├── combustion.py             # 燃燒實驗影片觀察頁面
+│   └── database.py                # 天辰 81 筆廢料大數據搜尋頁面
+├── services/                      # 後端核心解耦服務
+│   ├── material_engine.py         # [V2.0] 多模態動態融合評分引擎 (calculate_fusion_prediction)
+│   ├── gemini_service.py          # Gemini 3.5 Flash 視覺 API 連線服務
+│   └── media_loader.py            # 天辰廢料履歷資料庫載入與 Cloud 快取
+├── components/                    # UI 元件庫
+│   ├── fusion_result_card.py     # [NEW V2.0] 雷達圖與三路證據鏈結果卡片
+│   ├── result_card.py             # 基礎排名結果卡片
+│   └── navigation.py              # Sticky 手機導覽列
+├── assets/styles.css              # 430px Mobile Shell 手機優化 CSS
+├── requirements.txt               # 依賴套件清單
+└── README.md                      # V2.0 專案說明文件
 ```
 
 ---
@@ -71,11 +80,11 @@ cd AI-Plastic-distinguish
 pip install -r requirements.txt
 ```
 
-### 2. 啟動 Streamlit Web 服務
+### 2. 啟動 Streamlit V2.0 Web 服務
 ```bash
 streamlit run app.py
 ```
-啟動後瀏覽器打開 `http://localhost:8501` 即可進行測試！
+瀏覽器打開 `http://localhost:8501` 或手機同 Wi-Fi 打開 `http://192.168.x.x:8501` 即可使用！
 
 ---
 
@@ -87,15 +96,11 @@ streamlit run app.py
    - **Repository**: `smalleric8888/AI-Plastic-distinguish`
    - **Branch**: `main`
    - **Main file path**: `app.py`
-4. 點擊 **Deploy!** 即可獲得永久免費的手機 App 網址。
-
----
-
-## 📱 手機 App 桌面圖示設定 (PWA)
-
-在手機瀏覽器開啟部署完成的網址後：
-- **iOS (Safari)**：點擊「分享」圖示 ➔ 選擇 **「新增至主畫面」**。
-- **Android (Chrome)**：點擊右上角「⋮」選單 ➔ 選擇 **「新增至主畫面」**。
+4. 在 **App Settings -> Secrets** 設定 Key：
+   ```toml
+   GEMINI_API_KEY = "Your_Gemini_API_Key"
+   ```
+5. 點擊 **Deploy!** 即可體驗最新 V2.0 手機網頁 App。
 
 ---
 

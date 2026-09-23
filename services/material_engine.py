@@ -116,6 +116,171 @@ class MaterialEngine:
             "reference_media": media_ref
         }
 
+    def calculate_fusion_prediction(self, float_choice=None, sound_choice=None, smell_choice=None, audio_analysis=None, gemini_analysis=None, flame_choice=None):
+        """
+        V2 3-in-1 全模態融合評分引擎：
+        整合 視覺照片 (Gemini 3.5 Flash) + 敲擊聲響 (FFT Peak/Centroid) + 熱解燃燒 (火焰/氣味) + 水中浮沉
+        """
+        mats = ["PP", "PE", "ABS", "PVC", "PS", "PET"]
+        scores = {m: 0.0 for m in mats}
+        modality_scores = {
+            "vision": {m: 0.0 for m in mats},
+            "acoustic": {m: 0.0 for m in mats},
+            "thermal": {m: 0.0 for m in mats},
+            "physical": {m: 0.0 for m in mats}
+        }
+
+        # 1. 物理約束：水中浮沉 (Weight: 40)
+        if float_choice in [1, '1', "1"]:
+            modality_scores["physical"]["PP"] += 40.0
+            modality_scores["physical"]["PE"] += 40.0
+            modality_scores["physical"]["ABS"] -= 30.0
+            modality_scores["physical"]["PVC"] -= 30.0
+            modality_scores["physical"]["PS"] -= 30.0
+            modality_scores["physical"]["PET"] -= 30.0
+        elif float_choice in [2, '2', "2"]:
+            modality_scores["physical"]["ABS"] += 40.0
+            modality_scores["physical"]["PVC"] += 40.0
+            modality_scores["physical"]["PS"] += 40.0
+            modality_scores["physical"]["PET"] += 40.0
+            modality_scores["physical"]["PP"] -= 30.0
+            modality_scores["physical"]["PE"] -= 30.0
+
+        # 2. 視覺多模態 (Gemini AI Weight: 25)
+        gemini_predicted_mat = None
+        if gemini_analysis:
+            est_mats = gemini_analysis.get("estimated_materials") or gemini_analysis.get("candidates") or []
+            if est_mats:
+                gemini_predicted_mat = est_mats[0]
+                for idx, cand in enumerate(est_mats):
+                    if cand in modality_scores["vision"]:
+                        modality_scores["vision"][cand] += (25.0 - idx * 5.0)
+
+        # 3. 聲響敲擊 (Acoustic FFT Weight: 25)
+        acoustic_top = None
+        if sound_choice:
+            if sound_choice.startswith('A'): # 硬質敲擊
+                modality_scores["acoustic"]["ABS"] += 25.0
+                modality_scores["acoustic"]["PS"] += 20.0
+                modality_scores["acoustic"]["PVC"] += 15.0
+                modality_scores["acoustic"]["PET"] += 15.0
+            elif sound_choice.startswith('B'): # 柔軟延展
+                modality_scores["acoustic"]["PE"] += 25.0
+                modality_scores["acoustic"]["PP"] += 20.0
+            elif sound_choice.startswith('C'): # 打包帶
+                modality_scores["acoustic"]["PP"] += 25.0
+                modality_scores["acoustic"]["PET"] += 20.0
+                modality_scores["acoustic"]["PE"] += 10.0
+
+        if audio_analysis and audio_analysis.get("peak_freq"):
+            pf = audio_analysis["peak_freq"]
+            if pf > 2200:
+                modality_scores["acoustic"]["ABS"] += 10.0
+                modality_scores["acoustic"]["PS"] += 10.0
+                modality_scores["acoustic"]["PVC"] += 10.0
+            elif pf < 1200:
+                modality_scores["acoustic"]["PE"] += 10.0
+                modality_scores["acoustic"]["PP"] += 5.0
+
+        # 4. 燃燒熱解與氣味 (Thermal/Combustion Weight: 35)
+        thermal_top = None
+        if smell_choice:
+            if smell_choice.startswith('甲'): # 柴油/機油
+                modality_scores["thermal"]["PP"] += 35.0
+                modality_scores["thermal"]["PE"] += 10.0
+            elif smell_choice.startswith('乙'): # 石蠟/滴蠟
+                modality_scores["thermal"]["PE"] += 35.0
+                modality_scores["thermal"]["PP"] += 15.0
+            elif smell_choice.startswith('丙'): # 鹽酸/酸臭/綠焰
+                modality_scores["thermal"]["PVC"] += 40.0
+            elif smell_choice.startswith('丁'): # 輪胎/橡膠/黑煙
+                modality_scores["thermal"]["ABS"] += 35.0
+                modality_scores["thermal"]["PS"] += 15.0
+            elif smell_choice.startswith('戊'): # 化學甜味/碳黑
+                modality_scores["thermal"]["PS"] += 35.0
+                modality_scores["thermal"]["ABS"] += 20.0
+                modality_scores["thermal"]["PET"] += 15.0
+
+        if flame_choice:
+            if "綠" in flame_choice:
+                modality_scores["thermal"]["PVC"] += 20.0
+            elif "濃煙" in flame_choice or "黑煙" in flame_choice:
+                modality_scores["thermal"]["ABS"] += 15.0
+                modality_scores["thermal"]["PS"] += 15.0
+            elif "滴落" in flame_choice:
+                modality_scores["thermal"]["PE"] += 10.0
+                modality_scores["thermal"]["PP"] += 10.0
+
+        # 總分加總
+        for m in mats:
+            scores[m] = (
+                modality_scores["physical"][m] +
+                modality_scores["vision"][m] +
+                modality_scores["acoustic"][m] +
+                modality_scores["thermal"][m]
+            )
+
+        # 歸一化與排名計算
+        min_s = min(scores.values())
+        offset = abs(min_s) + 5.0 if min_s < 0 else 5.0
+        norm_scores = {k: v + offset for k, v in scores.items()}
+        total_score = sum(norm_scores.values())
+
+        sorted_results = sorted(
+            [{"material": k, "confidence": round((v / total_score) * 100, 1)} for k, v in norm_scores.items()],
+            key=lambda x: x["confidence"],
+            reverse=True
+        )
+
+        top3 = sorted_results[:3]
+        top1_mat = top3[0]["material"]
+
+        # 三路一致性評估 (Consistency Assessment)
+        vis_mat = gemini_predicted_mat or "待傳圖"
+        ac_mat = max(modality_scores["acoustic"], key=modality_scores["acoustic"].get) if sound_choice else "待測試"
+        th_mat = max(modality_scores["thermal"], key=modality_scores["thermal"].get) if smell_choice else "待測試"
+
+        match_count = 0
+        if vis_mat in [top1_mat, top3[1]["material"]]: match_count += 1
+        if ac_mat in [top1_mat, top3[1]["material"]]: match_count += 1
+        if th_mat in [top1_mat, top3[1]["material"]]: match_count += 1
+
+        if match_count >= 2:
+            consistency_status = "🟢 高度一致 (Strong Agreement)"
+        elif match_count == 1:
+            consistency_status = "🟡 部分吻合 (Moderate Agreement)"
+        else:
+            consistency_status = "🔴 數據衝突警示 (Discrepancy Alert)"
+
+        # 雷達圖資料準備 (各材質在三路模態的 normalized 分數 0-100)
+        radar_mats = [top1_mat, top3[1]["material"], top3[2]["material"]]
+        radar_data = {}
+        for r_mat in radar_mats:
+            v_score = max(0, min(100, modality_scores["vision"][r_mat] * 4))
+            a_score = max(0, min(100, modality_scores["acoustic"][r_mat] * 3))
+            t_score = max(0, min(100, modality_scores["thermal"][r_mat] * 2.5))
+            radar_data[r_mat] = [v_score, a_score, t_score]
+
+        mat_info = self.loader.get_material_info(top1_mat)
+        media_ref = self.loader.get_reference_media(top1_mat)
+
+        return {
+            "version": "V2.0",
+            "top3": top3,
+            "top1_material": top1_mat,
+            "top1_confidence": top3[0]["confidence"],
+            "consistency_status": consistency_status,
+            "evidence_chain": {
+                "vision": vis_mat,
+                "acoustic": ac_mat,
+                "thermal": th_mat
+            },
+            "radar_data": radar_data,
+            "all_scores": sorted_results,
+            "material_info": mat_info,
+            "reference_media": media_ref
+        }
+
     def analyze_audio_bytes(self, audio_bytes):
         """計算音訊波形、FFT 頻譜、主頻率 (Peak Freq) 與 頻譜重心 (Spectral Centroid)"""
         try:
@@ -149,3 +314,4 @@ class MaterialEngine:
                 "spectral_centroid": 2600,
                 "is_high_pitch": True
             }
+

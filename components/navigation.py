@@ -2,11 +2,11 @@ import streamlit as st
 
 def render_navigation_bar():
     """渲染單一狀態 App 導覽頁籤 (Position Sticky)"""
-    options = ["🏠 辨識", "🎵 聲響", "🎥 燃燒", "📁 資料庫"]
+    options = ["🔬 3合1綜合", "🏠 照片辨識", "🎵 聲響", "🎥 燃燒", "📁 資料庫"]
     
     # 初始化 active_page
     if "active_page" not in st.session_state:
-        st.session_state["active_page"] = "🏠 辨識"
+        st.session_state["active_page"] = "🔬 3合1綜合"
 
     # 使用 segmented_control (Streamlit 1.40+) 或 radio
     try:
