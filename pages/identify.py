@@ -17,11 +17,13 @@ def render_identify_page(material_engine: MaterialEngine):
     with col1:
         source_option = st.radio(
             "請選擇照片來源：",
-            ["選擇天辰測試照片庫 (預設測試1.jpg)", "上傳手機/電腦照片"],
+            ["上傳手機/電腦照片 (拍照/選擇相片)", "選擇天辰測試照片庫 (測試樣品照)"],
             index=0
         )
 
-        if source_option == "選擇天辰測試照片庫 (預設測試1.jpg)":
+        if source_option == "上傳手機/電腦照片 (拍照/選擇相片)":
+            uploaded_photo = st.file_uploader("請拍攝或上傳塑膠物品照片：", type=["jpg", "png", "jpeg"])
+        else:
             test_photos = []
             local_sample = os.path.join(os.path.dirname(os.path.dirname(__file__)), "測試1.jpg")
             if os.path.exists(local_sample):
@@ -34,8 +36,6 @@ def render_identify_page(material_engine: MaterialEngine):
             if photo_names:
                 idx = st.selectbox("請選擇測試樣品照：", range(len(photo_names)), format_func=lambda i: photo_names[i])
                 selected_image_path = test_photos[idx]
-        else:
-            uploaded_photo = st.file_uploader("請上傳塑膠物品照片：", type=["jpg", "png", "jpeg"])
 
     with col2:
         if uploaded_photo:
