@@ -22,6 +22,9 @@ def render_identify_page(material_engine: MaterialEngine):
             active_img = Image.open(uploaded_photo)
             st.image(active_img, caption="待測照片預覽", use_container_width=True)
             st.session_state["uploaded_image"] = active_img
+        elif st.session_state.get("uploaded_image"):
+            active_img = st.session_state["uploaded_image"]
+            st.image(active_img, caption="待測照片預覽 (已同頁連動)", use_container_width=True)
         else:
             st.info("📷 請拍攝或上傳塑膠廢料照片")
 

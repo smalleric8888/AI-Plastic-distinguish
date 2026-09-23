@@ -28,19 +28,22 @@ if os.path.exists(css_path):
     with open(css_path, "r", encoding="utf-8") as f:
         st.markdown(f"<style>{f.read()}</style>", unsafe_allow_html=True)
 
-# 2. 初始化 Session State 狀態
-if "uploaded_image" not in st.session_state:
-    st.session_state["uploaded_image"] = None
-if "gemini_result" not in st.session_state:
-    st.session_state["gemini_result"] = None
-if "float_test" not in st.session_state:
-    st.session_state["float_test"] = None
-if "sound_test" not in st.session_state:
-    st.session_state["sound_test"] = None
-if "burn_test" not in st.session_state:
-    st.session_state["burn_test"] = None
-if "final_result" not in st.session_state:
-    st.session_state["final_result"] = None
+# 2. 初始化全局 Session State 狀態 (跨頁籤持久化)
+global_keys = {
+    "uploaded_image": None,
+    "gemini_result": None,
+    "float_test": 1,
+    "sound_test": None,
+    "burn_test": None,
+    "flame_choice": None,
+    "audio_bytes": None,
+    "audio_analysis": None,
+    "fusion_final_result": None,
+    "last_uploaded_name": None
+}
+for key, val in global_keys.items():
+    if key not in st.session_state:
+        st.session_state[key] = val
 
 # 3. 實例化解耦服務模組
 media_loader = MediaLoader()
