@@ -1,106 +1,91 @@
-# ♻️ 天辰 AI 塑膠材質模擬辨識系統 V2.0 (Tianchen AI Plastic Identification System V2.0)
+# ♻️ 塑膠材質初步辨識系統 V3.0 (Tianchen Plastic Material Identification System V3.0)
 
 [![Streamlit App](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ai-plastic-distinguish-dbakjmlh2tvfaexwaynjip.streamlit.app)
-![Version](https://img.shields.io/badge/version-2.0.0-blue)
+![Version](https://img.shields.io/badge/version-3.0.0-blue)
 ![Python Version](https://img.shields.io/badge/python-3.9%2B-blue)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-本系統是一套結合 **Gemini 3.5 Flash 多模態 AI** 與 **天辰廢料全循環履歷大數據庫** 的手機/Web 多模態塑膠材質鑑定系統。
-V2.0 版本新增 **「3合1全模態綜合辨識 (3-in-1 Multi-Modal Fusion Analysis)」**，允許使用者在單一介面中同時融合 **照片視覺 AI**、**敲擊聲響頻譜 (FFT)** 與 **熱解燃燒氣味**，由融合診斷引擎動態算演 Top-3 最優估算結果、三路證據鏈契合度與 Plotly 雷達圖。
+本系統是一套結合 **Gemini 3.5 Flash 多模態 AI** 與 **天辰廢料全循環履歷大數據庫** 的手機/Web 多模態塑膠材質初步鑑定系統。
+
+V3.0 版本完成重大的 **UX/UI、WCAG 2.1 AA 高對比度與「零證據零輸出」可信度重構**，嚴格確保未提供測試數據前絕對不輸出假材質排名，並引入「相對匹配分數」、「資料完整度 Badge」與「無法判定/光譜複核保護卡」。
 
 ---
 
-## 🌟 V2.0 核心功能與架構 (V2.0 Key Features)
+## 🌟 V3.0 核心亮點與體驗重構 (V3.0 Key Features)
 
 ```
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                 🔬 V2.0 3合1全模態綜合辨識 (Unified Fusion)             │
+│              🔬 V3.0 塑膠材質初步辨識系統 (零證據保護機制)              │
 ├────────────────────┬────────────────────┬───────────────────────────────┤
-│ 📸 模態1: 視覺照片  │ 🎵 模態2: 敲擊聲響  │ 🎥 模態3: 燃燒與氣味          │
-│ (Gemini 3.5 Flash) │ (FFT Peak/Centroid)│ (柴油/石蠟/鹽酸/輪胎/化學甜味) │
+│ 📸 模態1: 視覺照片  │ 🌊 模態2: 水中浮沉  │ 🎵 模態3: 敲擊聲響 & 熱解氣味 │
+│ (Gemini 3.5 Flash) │ (ρ < 1.0 / > 1.0)  │ (15秒錄音指引 / 實用通風提醒) │
 └────────────────────┴────────────────────┴───────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│               🧠 多模態動態權重融合評分引擎 (MaterialEngine)            │
-│  物理約束 (浮沉) + 視覺AI (+25) + 聲響FFT (+25) + 熱解氣味 (+35)         │
+│               🧠 多模態特徵評分與「無法判定」保護引擎                  │
+│  無預設解答 + 證據完整度 (X/4) + 相對匹配分數 + 衝突檢測保護機制       │
 └────────────────────────────────────┬────────────────────────────────────┘
                                      │
                                      ▼
 ┌─────────────────────────────────────────────────────────────────────────┐
-│                 📊 V2.0 綜合診斷報告 ✕ 三路證據鏈對照                   │
-│ 🥇 Top-3 歸一化信心度  │ 🕸️ Plotly 三路契合雷達圖 │ 🟢 證據鏈一致性檢測 │
+│                 📊 V3.0 初步診斷報告 ✕ 收合式雷達圖與資料庫             │
+│ 🥇 相對匹配分數排名 │ 🔴 無法判定/光譜複核卡 │ 📚 81筆預設收合廢料庫 │
 └─────────────────────────────────────────────────────────────────────────┘
 ```
 
-1. **🔬 V2.0 3合1全模態綜合辨識 (3-in-1 Fusion)**：
-   - 整合照片、聲音波形與燃燒特徵三路數據，提供一站式綜合鑑定報告。
-2. **🤖 Gemini 3.5 Flash 實時視覺 AI**：
-   - 上傳廢料照片，實時分析物品輪廓、色彩特徵與全球工業應用。
-3. **🎵 聲學波形與 FFT 頻譜分析**：
-   - 支援敲擊聲音上傳/錄製，計算 Peak Freq (主頻) 與 Spectral Centroid (頻譜重心)，辨識硬質金屬響聲 ($>2200 \text{ Hz}$) 或柔軟低音。
-4. **🎥 燃燒影片與熱解氣味觀察**：
-   - 提供黃焰、濃煙、綠焰 (PVC) 與特定化學氣味（柴油味 PP / 石蠟味 PE / 輪胎味 ABS / 甜味 PS）對照。
-5. **📁 天辰資料庫實體影音對照**：
-   - 連接天辰廢料庫，包含標準參考照片與 8 組實體燃燒實驗影片。
+1. **🛡️ 零證據零輸出原則**：
+   - 移除所有問答選單的預設勾選（全數預設 `(未測試 / 請選擇)`）。
+   - 未上傳照片或完成任何實體測試前，**不顯示**任何材質名稱與百分比，僅呈現引導提示卡。
+2. **♿ WCAG 2.1 AA 無障礙高對比度**：
+   - 重構全站 CSS 色彩 Token，內文全面採用 Dark Slate (`#1e293b`) 與高對比背景，戶外與手機螢幕清晰可讀。
+3. **📊 相對匹配分數與「無法判定」保護**：
+   - 信心度名詞調整為 **「相對匹配分數 (Relative Match Score)」**，並註明「非實驗室光譜確證檢驗」。
+   - 標示「已完成 X/4 項測試，資料完整度 Y%」。
+   - 當數據低於 2 項、同分（< 5%）或特徵衝突時，主動觸發 **「🔴 無法可靠判定 / 建議送 FTIR/NIR 光譜檢驗」**。
+4. **🔥 實用通風與高溫安全提醒**：
+   - 燃燒頁面提供實用的通風與火源安全提示卡，開放直接選擇，無需阻礙操作。
+5. **📚 預設收合材質資料庫**：
+   - 天辰 81 筆廢料項目採預設收合 (`st.expander(..., expanded=False)`)，大幅降低手機掃讀成本。
 
 ---
 
 ## 📂 專案檔案結構 (Project Structure)
 
 ```text
-├── app.py                         # V2.0 Streamlit Web 主程式與頁面路由
+├── app.py                         # V3.0 Streamlit Web 主程式與全頁面路由
 ├── pages/                         # 模組化頁面分發
-│   ├── fusion.py                  # [NEW V2.0] 3合1全模態綜合辨識頁面
-│   ├── identify.py                # 漸進式照片與診斷問答頁面
-│   ├── audio.py                   # 敲擊聲響波形與 FFT 頻譜頁面
-│   ├── combustion.py             # 燃燒實驗影片觀察頁面
-│   └── database.py                # 天辰 81 筆廢料大數據搜尋頁面
-├── services/                      # 後端核心解耦服務
-│   ├── material_engine.py         # [V2.0] 多模態動態融合評分引擎 (calculate_fusion_prediction)
+│   ├── fusion.py                  # V3.0 綜合辨識主頁面 (4步引導 & 零證據保護)
+│   ├── identify.py                # 漸進式照片辨識與診斷問答頁面
+│   ├── audio.py                   # 敲擊聲響波形與 15 秒錄音指引頁面
+│   ├── combustion.py             # 燃燒觀察與通風安全提醒頁面
+│   └── database.py                # [V3.0] 預設收合廢料庫搜尋頁面
+├── services/                      # 後端核心服務
+│   ├── material_engine.py         # [V3.0] 零證據保護、相對匹配分數與無法判定評分引擎
 │   ├── gemini_service.py          # Gemini 3.5 Flash 視覺 API 連線服務
 │   └── media_loader.py            # 天辰廢料履歷資料庫載入與 Cloud 快取
 ├── components/                    # UI 元件庫
-│   ├── fusion_result_card.py     # [NEW V2.0] 雷達圖與三路證據鏈結果卡片
-│   ├── result_card.py             # 基礎排名結果卡片
-│   └── navigation.py              # Sticky 手機導覽列
-├── assets/styles.css              # 430px Mobile Shell 手機優化 CSS
+│   ├── fusion_result_card.py     # [V3.0] 匹配分數、無法判定警告框與收合雷達圖卡片
+│   └── navigation.py              # 筆直簡潔高對比手機導覽列
+├── assets/styles.css              # [V3.0] WCAG AA 高對比 CSS 樣式表
 ├── requirements.txt               # 依賴套件清單
-└── README.md                      # V2.0 專案說明文件
+└── README.md                      # V3.0 專案說明文件
 ```
 
 ---
 
 ## 🛠️ 本地端快速啟動 (Local Quick Start)
 
-### 1. 複製專案與安裝套件
 ```bash
+# 1. 複製專案與安裝套件
 git clone https://github.com/smalleric8888/AI-Plastic-distinguish.git
 cd AI-Plastic-distinguish
 pip install -r requirements.txt
-```
 
-### 2. 啟動 Streamlit V2.0 Web 服務
-```bash
+# 2. 啟動 Streamlit V3.0 Web 服務
 streamlit run app.py
 ```
 瀏覽器打開 `http://localhost:8501` 或手機同 Wi-Fi 打開 `http://192.168.x.x:8501` 即可使用！
-
----
-
-## 🌐 雲端一鍵部署 (Deploy to Streamlit Community Cloud)
-
-1. 將本儲存庫 Fork 或 Push 至您的 GitHub。
-2. 開啟 [Streamlit Community Cloud](https://share.streamlit.io)。
-3. 點擊 **Create App**，填入：
-   - **Repository**: `smalleric8888/AI-Plastic-distinguish`
-   - **Branch**: `main`
-   - **Main file path**: `app.py`
-4. 在 **App Settings -> Secrets** 設定 Key：
-   ```toml
-   GEMINI_API_KEY = "Your_Gemini_API_Key"
-   ```
-5. 點擊 **Deploy!** 即可體驗最新 V2.0 手機網頁 App。
 
 ---
 

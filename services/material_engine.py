@@ -5,123 +5,46 @@ class MaterialEngine:
     def __init__(self, media_loader=None):
         self.loader = media_loader or MediaLoader()
 
-    def calculate_top3_prediction(self, float_choice, sound_choice, smell_choice, audio_analysis=None, video_analysis=None, gemini_analysis=None):
-        """
-        計算材質 Top-3 排名與百分比信心度 (PP, PE, ABS, PVC, PS)
-        """
-        scores = {
-            "PP": 0.0,
-            "PE": 0.0,
-            "ABS": 0.0,
-            "PVC": 0.0,
-            "PS": 0.0
-        }
-
-        # 1. 水中浮沉權重 (Weight: 40)
-        if float_choice == 1 or float_choice == '1': # 浮於水 (<1.0)
-            scores["PP"] += 40.0
-            scores["PE"] += 40.0
-            scores["ABS"] -= 30.0
-            scores["PVC"] -= 30.0
-            scores["PS"] -= 30.0
-        elif float_choice == 2 or float_choice == '2': # 沉於水 (>1.0)
-            scores["ABS"] += 40.0
-            scores["PVC"] += 40.0
-            scores["PS"] += 40.0
-            scores["PP"] -= 30.0
-            scores["PE"] -= 30.0
-
-        # 2. 剛性聲響與觸感權重 (Weight: 30)
-        if sound_choice == 'A': # 硬質敲擊聲
-            scores["ABS"] += 30.0
-            scores["PS"] += 25.0
-            scores["PVC"] += 20.0
-            scores["PP"] += 20.0
-            scores["PE"] += 0.0
-        elif sound_choice == 'B': # 柔軟延展
-            scores["PE"] += 30.0
-            scores["PP"] += 20.0
-            scores["ABS"] -= 15.0
-            scores["PS"] -= 15.0
-        elif sound_choice == 'C': # 打包帶
-            scores["PP"] += 30.0
-            scores["PE"] += 15.0
-
-        # 3. 燃燒氣味與火焰權重 (Weight: 30)
-        if smell_choice == '甲': # 柴油機油味
-            scores["PP"] += 35.0
-            scores["PE"] += 10.0
-        elif smell_choice == '乙': # 石蠟滴蠟味
-            scores["PE"] += 35.0
-            scores["PP"] += 15.0
-        elif smell_choice == '丙': # 鹽酸酸臭味/綠焰
-            scores["PVC"] += 40.0
-        elif smell_choice == '丁': # 燒焦輪胎味/橡膠臭
-            scores["ABS"] += 40.0
-            scores["PS"] += 20.0
-        elif smell_choice == '戊': # 化學甜味/碳黑
-            scores["PS"] += 40.0
-            scores["ABS"] += 20.0
-
-        # 音訊/影片加分
-        if audio_analysis and audio_analysis.get("peak_freq"):
-            if audio_analysis["peak_freq"] > 2200:
-                scores["ABS"] += 10.0
-                scores["PVC"] += 10.0
-                scores["PS"] += 10.0
-            elif audio_analysis["peak_freq"] < 1200:
-                scores["PE"] += 10.0
-
-        # Gemini 大數據輔助加分
-        gemini_predicted_mat = None
-        if gemini_analysis:
-            est_mats = gemini_analysis.get("estimated_materials") or gemini_analysis.get("candidates") or []
-            if est_mats:
-                gemini_predicted_mat = est_mats[0]
-                for cand in est_mats:
-                    if cand in scores:
-                        scores[cand] += 15.0
-
-        # 計算百分比排名
-        min_s = min(scores.values())
-        offset = abs(min_s) + 5.0 if min_s < 0 else 5.0
-        norm_scores = {k: v + offset for k, v in scores.items()}
-        total_score = sum(norm_scores.values())
-
-        sorted_results = sorted(
-            [{"material": k, "confidence": round((v / total_score) * 100, 1)} for k, v in norm_scores.items()],
-            key=lambda x: x["confidence"],
-            reverse=True
+    def calculate_top3_prediction(self, float_choice=None, sound_choice=None, smell_choice=None, audio_analysis=None, video_analysis=None, gemini_analysis=None):
+        """相容 V1 單頁呼叫，轉接至 calculate_fusion_prediction"""
+        return self.calculate_fusion_prediction(
+            float_choice=float_choice,
+            sound_choice=sound_choice,
+            smell_choice=smell_choice,
+            audio_analysis=audio_analysis,
+            gemini_analysis=gemini_analysis
         )
-
-        top3 = sorted_results[:3]
-        top1_mat = top3[0]["material"]
-
-        # 計算照片 AI 與人工測試是否吻合
-        is_match = False
-        if gemini_predicted_mat:
-            is_match = (gemini_predicted_mat == top1_mat)
-
-        mat_info = self.loader.get_material_info(top1_mat)
-        media_ref = self.loader.get_reference_media(top1_mat)
-
-        return {
-            "top3": top3,
-            "top1_material": top1_mat,
-            "top1_confidence": top3[0]["confidence"],
-            "is_ai_test_matched": is_match,
-            "gemini_predicted_material": gemini_predicted_mat,
-            "all_scores": sorted_results,
-            "material_info": mat_info,
-            "reference_media": media_ref
-        }
 
     def calculate_fusion_prediction(self, float_choice=None, sound_choice=None, smell_choice=None, audio_analysis=None, gemini_analysis=None, flame_choice=None):
         """
-        V2 3-in-1 全模態融合評分引擎：
-        整合 視覺照片 (Gemini 3.5 Flash) + 敲擊聲響 (FFT Peak/Centroid) + 熱解燃燒 (火焰/氣味) + 水中浮沉
+        V3.0 塑膠材質初步辨識評分引擎：
+        嚴格執行「零證據零輸出」原則，計算證據完整度、相對匹配分數與「無法判定」保護機制。
         """
         mats = ["PP", "PE", "ABS", "PVC", "PS", "PET"]
+        
+        # 1. 檢查是否有任何有效證據
+        has_vis = gemini_analysis is not None and bool(gemini_analysis.get("estimated_materials"))
+        has_ac = (sound_choice is not None and not sound_choice.startswith("(未")) or (audio_analysis is not None and audio_analysis.get("peak_freq") is not None)
+        has_th = (smell_choice is not None and not smell_choice.startswith("(未")) or (flame_choice is not None and not flame_choice.startswith("(未"))
+        has_phy = float_choice is not None and str(float_choice) in ["1", "2"]
+
+        valid_evidence_count = sum([has_vis, has_ac, has_th, has_phy])
+
+        if valid_evidence_count == 0:
+            return {
+                "version": "V3.0",
+                "has_evidence": False,
+                "evidence_count": 0,
+                "evidence_completeness": "0/4 項 (0%)",
+                "top3": [],
+                "top1_material": None,
+                "relative_match_score": None,
+                "is_undetermined": True,
+                "undetermined_reason": "尚未提供任何廢料照片或進行實體診斷測試。請開始提供證據以產出鑑定報告。",
+                "material_info": {},
+                "reference_media": {}
+            }
+
         scores = {m: 0.0 for m in mats}
         modality_scores = {
             "vision": {m: 0.0 for m in mats},
@@ -130,25 +53,26 @@ class MaterialEngine:
             "physical": {m: 0.0 for m in mats}
         }
 
-        # 1. 物理約束：水中浮沉 (Weight: 40)
-        if float_choice in [1, '1', "1"]:
-            modality_scores["physical"]["PP"] += 40.0
-            modality_scores["physical"]["PE"] += 40.0
-            modality_scores["physical"]["ABS"] -= 30.0
-            modality_scores["physical"]["PVC"] -= 30.0
-            modality_scores["physical"]["PS"] -= 30.0
-            modality_scores["physical"]["PET"] -= 30.0
-        elif float_choice in [2, '2', "2"]:
-            modality_scores["physical"]["ABS"] += 40.0
-            modality_scores["physical"]["PVC"] += 40.0
-            modality_scores["physical"]["PS"] += 40.0
-            modality_scores["physical"]["PET"] += 40.0
-            modality_scores["physical"]["PP"] -= 30.0
-            modality_scores["physical"]["PE"] -= 30.0
+        # 2. 物理約束：水中浮沉 (Weight: 40)
+        if has_phy:
+            if str(float_choice) == "1": # 浮水 (<1.0)
+                modality_scores["physical"]["PP"] += 40.0
+                modality_scores["physical"]["PE"] += 40.0
+                modality_scores["physical"]["ABS"] -= 30.0
+                modality_scores["physical"]["PVC"] -= 30.0
+                modality_scores["physical"]["PS"] -= 30.0
+                modality_scores["physical"]["PET"] -= 30.0
+            elif str(float_choice) == "2": # 沉水 (>1.0)
+                modality_scores["physical"]["ABS"] += 40.0
+                modality_scores["physical"]["PVC"] += 40.0
+                modality_scores["physical"]["PS"] += 40.0
+                modality_scores["physical"]["PET"] += 40.0
+                modality_scores["physical"]["PP"] -= 30.0
+                modality_scores["physical"]["PE"] -= 30.0
 
-        # 2. 視覺多模態 (Gemini AI Weight: 25)
+        # 3. 視覺多模態 (Gemini AI Weight: 25)
         gemini_predicted_mat = None
-        if gemini_analysis:
+        if has_vis:
             est_mats = gemini_analysis.get("estimated_materials") or gemini_analysis.get("candidates") or []
             if est_mats:
                 gemini_predicted_mat = est_mats[0]
@@ -156,9 +80,8 @@ class MaterialEngine:
                     if cand in modality_scores["vision"]:
                         modality_scores["vision"][cand] += (25.0 - idx * 5.0)
 
-        # 3. 聲響敲擊 (Acoustic FFT Weight: 25)
-        acoustic_top = None
-        if sound_choice:
+        # 4. 聲響敲擊 (Acoustic Weight: 25)
+        if sound_choice and not sound_choice.startswith("(未"):
             if sound_choice.startswith('A'): # 硬質敲擊
                 modality_scores["acoustic"]["ABS"] += 25.0
                 modality_scores["acoustic"]["PS"] += 20.0
@@ -182,26 +105,25 @@ class MaterialEngine:
                 modality_scores["acoustic"]["PE"] += 10.0
                 modality_scores["acoustic"]["PP"] += 5.0
 
-        # 4. 燃燒熱解與氣味 (Thermal/Combustion Weight: 35)
-        thermal_top = None
-        if smell_choice:
-            if smell_choice.startswith('甲'): # 柴油/機油
+        # 5. 燃燒熱解與氣味 (Thermal Weight: 35)
+        if smell_choice and not smell_choice.startswith("(未"):
+            if smell_choice.startswith('甲'):
                 modality_scores["thermal"]["PP"] += 35.0
                 modality_scores["thermal"]["PE"] += 10.0
-            elif smell_choice.startswith('乙'): # 石蠟/滴蠟
+            elif smell_choice.startswith('乙'):
                 modality_scores["thermal"]["PE"] += 35.0
                 modality_scores["thermal"]["PP"] += 15.0
-            elif smell_choice.startswith('丙'): # 鹽酸/酸臭/綠焰
+            elif smell_choice.startswith('丙'):
                 modality_scores["thermal"]["PVC"] += 40.0
-            elif smell_choice.startswith('丁'): # 輪胎/橡膠/黑煙
+            elif smell_choice.startswith('丁'):
                 modality_scores["thermal"]["ABS"] += 35.0
                 modality_scores["thermal"]["PS"] += 15.0
-            elif smell_choice.startswith('戊'): # 化學甜味/碳黑
+            elif smell_choice.startswith('戊'):
                 modality_scores["thermal"]["PS"] += 35.0
                 modality_scores["thermal"]["ABS"] += 20.0
                 modality_scores["thermal"]["PET"] += 15.0
 
-        if flame_choice:
+        if flame_choice and not flame_choice.startswith("(未"):
             if "綠" in flame_choice:
                 modality_scores["thermal"]["PVC"] += 20.0
             elif "濃煙" in flame_choice or "黑煙" in flame_choice:
@@ -220,25 +142,25 @@ class MaterialEngine:
                 modality_scores["thermal"][m]
             )
 
-        # 歸一化與排名計算
+        # 相對匹配分數百分比歸一化
         min_s = min(scores.values())
         offset = abs(min_s) + 5.0 if min_s < 0 else 5.0
         norm_scores = {k: v + offset for k, v in scores.items()}
         total_score = sum(norm_scores.values())
 
         sorted_results = sorted(
-            [{"material": k, "confidence": round((v / total_score) * 100, 1)} for k, v in norm_scores.items()],
-            key=lambda x: x["confidence"],
+            [{"material": k, "relative_match_score": round((v / total_score) * 100, 1)} for k, v in norm_scores.items()],
+            key=lambda x: x["relative_match_score"],
             reverse=True
         )
 
         top3 = sorted_results[:3]
         top1_mat = top3[0]["material"]
 
-        # 三路一致性評估 (Consistency Assessment)
-        vis_mat = gemini_predicted_mat or "待傳圖"
-        ac_mat = max(modality_scores["acoustic"], key=modality_scores["acoustic"].get) if sound_choice else "待測試"
-        th_mat = max(modality_scores["thermal"], key=modality_scores["thermal"].get) if smell_choice else "待測試"
+        # 三路一致性評估
+        vis_mat = gemini_predicted_mat or "未測試"
+        ac_mat = max(modality_scores["acoustic"], key=modality_scores["acoustic"].get) if has_ac else "未測試"
+        th_mat = max(modality_scores["thermal"], key=modality_scores["thermal"].get) if has_th else "未測試"
 
         match_count = 0
         if vis_mat in [top1_mat, top3[1]["material"]]: match_count += 1
@@ -246,13 +168,28 @@ class MaterialEngine:
         if th_mat in [top1_mat, top3[1]["material"]]: match_count += 1
 
         if match_count >= 2:
-            consistency_status = "🟢 高度一致 (Strong Agreement)"
+            consistency_status = "🟢 高度吻合 (Strong Agreement)"
         elif match_count == 1:
             consistency_status = "🟡 部分吻合 (Moderate Agreement)"
         else:
-            consistency_status = "🔴 數據衝突警示 (Discrepancy Alert)"
+            consistency_status = "🔴 證據存在衝突 (Discrepancy Alert)"
 
-        # 雷達圖資料準備 (各材質在三路模態的 normalized 分數 0-100)
+        # 「無法判定」條件評估
+        is_undetermined = False
+        undetermined_reason = ""
+
+        score_diff = top3[0]["relative_match_score"] - top3[1]["relative_match_score"]
+        if valid_evidence_count < 2:
+            is_undetermined = True
+            undetermined_reason = f"目前僅提供 {valid_evidence_count}/4 項測試證據，資料完整度偏低，結果僅供初步相符度參考。"
+        elif score_diff < 5.0:
+            is_undetermined = True
+            undetermined_reason = f"首選材質 {top1_mat} ({top3[0]['relative_match_score']}%) 與次選材質 {top3[1]['material']} ({top3[1]['relative_match_score']}%) 相對匹配分數過於接近 (相差 < 5%)，特徵具有重複性，建議送實驗室光譜確證。"
+        elif "衝突" in consistency_status:
+            is_undetermined = True
+            undetermined_reason = f"照片、聲響與燃燒實驗特徵結論存在明顯衝突 (如照片為 {vis_mat} 但氣味為 {th_mat})，請複核輸入，或送實驗室進行 FTIR/NIR 標準檢測。"
+
+        # 雷達圖資料準備
         radar_mats = [top1_mat, top3[1]["material"], top3[2]["material"]]
         radar_data = {}
         for r_mat in radar_mats:
@@ -265,11 +202,16 @@ class MaterialEngine:
         media_ref = self.loader.get_reference_media(top1_mat)
 
         return {
-            "version": "V2.0",
+            "version": "V3.0",
+            "has_evidence": True,
+            "evidence_count": valid_evidence_count,
+            "evidence_completeness": f"{valid_evidence_count}/4 項 ({int(valid_evidence_count/4*100)}%)",
             "top3": top3,
             "top1_material": top1_mat,
-            "top1_confidence": top3[0]["confidence"],
+            "relative_match_score": top3[0]["relative_match_score"],
             "consistency_status": consistency_status,
+            "is_undetermined": is_undetermined,
+            "undetermined_reason": undetermined_reason,
             "evidence_chain": {
                 "vision": vis_mat,
                 "acoustic": ac_mat,
@@ -293,7 +235,6 @@ class MaterialEngine:
             peak_idx = np.argmax(fft_vals[1:]) + 1
             peak_freq = int(freqs[peak_idx])
 
-            # 計算頻譜重心 (Spectral Centroid)
             sum_fft = np.sum(fft_vals)
             spectral_centroid = int(np.sum(freqs * fft_vals) / sum_fft) if sum_fft > 0 else peak_freq
 
@@ -314,4 +255,3 @@ class MaterialEngine:
                 "spectral_centroid": 2600,
                 "is_high_pitch": True
             }
-
