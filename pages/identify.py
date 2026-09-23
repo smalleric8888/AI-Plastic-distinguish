@@ -15,39 +15,15 @@ def render_identify_page(material_engine: MaterialEngine):
     active_img = None
 
     with col1:
-        source_option = st.radio(
-            "請選擇照片來源：",
-            ["上傳手機/電腦照片 (拍照/選擇相片)", "選擇天辰測試照片庫 (測試樣品照)"],
-            index=0
-        )
-
-        if source_option == "上傳手機/電腦照片 (拍照/選擇相片)":
-            uploaded_photo = st.file_uploader("請拍攝或上傳塑膠物品照片：", type=["jpg", "png", "jpeg"])
-        else:
-            test_photos = []
-            local_sample = os.path.join(os.path.dirname(os.path.dirname(__file__)), "測試1.jpg")
-            if os.path.exists(local_sample):
-                test_photos.append(local_sample)
-            
-            for s in material_engine.loader.sample_items:
-                test_photos.extend(s["images"][:1])
-
-            photo_names = [os.path.basename(p) for p in test_photos]
-            if photo_names:
-                idx = st.selectbox("請選擇測試樣品照：", range(len(photo_names)), format_func=lambda i: photo_names[i])
-                selected_image_path = test_photos[idx]
+        uploaded_photo = st.file_uploader("請拍攝或選擇塑膠廢料照片：", type=["jpg", "png", "jpeg"])
 
     with col2:
         if uploaded_photo:
             active_img = Image.open(uploaded_photo)
-            st.image(active_img, caption="上傳之待測照片", use_container_width=True)
-            st.session_state["uploaded_image"] = active_img
-        elif selected_image_path and os.path.exists(selected_image_path):
-            active_img = Image.open(selected_image_path)
-            st.image(active_img, caption=f"樣品照：{os.path.basename(selected_image_path)}", use_container_width=True)
+            st.image(active_img, caption="待測照片預覽", use_container_width=True)
             st.session_state["uploaded_image"] = active_img
         else:
-            st.warning("尚未載入照片")
+            st.info("📷 請拍攝或上傳塑膠廢料照片")
 
     # Gemini 結構化 JSON 分析摘要
     if active_img:
